@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 const cookieParser = require("cookie-parser");
 const mongoDB = require("./config/mongo.config");
+const morgan = require('morgan');
 
 const port = process.env.PORT || 5000;
 const allowedOrigins = [
@@ -25,6 +26,7 @@ const allowedOrigins = [
   );
   app.use(express.json());
   app.use(cookieParser());
+  app.use(morgan('dev'));
 
   app.get("/", (req, res) => {
     res.send("Hello World!");
