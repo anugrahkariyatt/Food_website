@@ -1,6 +1,6 @@
 const {
   createOrderService,
-  fetchOrderedService,
+  getOrdersService,
 } = require("../services/orders.service");
 
 exports.createOrder = async (req, res) => {
@@ -27,17 +27,13 @@ exports.createOrder = async (req, res) => {
 
 exports.fetchOrderedItems = async (req, res) => {
   try {
-    const data = {
-      email: req.user.email,
-      order_data: req.body.order_data,
-      order_date: req.body.order_date,
-    };
-
-    const result = await fetchOrderedService(data);
+    const result = await getOrdersService(req.user.email);
+    console.log(">>>>>>", result);
 
     res.status(200).json({
-      success: true,
-      message: result.message,
+      orderData: {
+        order_data: result.orders?.order_data || [],
+      },
     });
   } catch (err) {
     res.status(err.statusCode || 500).json({
