@@ -1,47 +1,48 @@
-const Orders = require("../models/order.model");
+const {
+  createOrderService,
+  fetchOrderedService,
+} = require("../services/orders.service");
 
-//  PLACE ORDER
 exports.createOrder = async (req, res) => {
   try {
-    const { order_data, order_date } = req.body;
-    const email = req.user.email;
-    // console.log("email ", email)
+    const data = {
+      email: req.user.email,
+      order_data: req.body.order_data,
+      order_date: req.body.order_date,
+    };
 
-    if (!order_data || !order_date) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
+    const result = await createOrderService(data);
 
-    let data = [...order_data];
-    data.unshift({ Order_date: order_date });
-
-    const existingOrder = await Orders.findOne({ email });
-
-    if (!existingOrder) {
-      await Orders.create({
-        email,
-        order_data: [data],
-      });
-    } else {
-      await Orders.findOneAndUpdate({ email }, { $push: { order_data: data } });
-    }
-
-    res.status(200).json({ message: "Order Placed" });
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
   } catch (err) {
-    console.error("Server error:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Server Error",
+    });
   }
 };
 
 exports.fetchOrderedItems = async (req, res) => {
   try {
-    const email = req.user.email;
-    // console.log("email id >>>>>>>>>>>> ", email)
+    const data = {
+      email: req.user.email,
+      order_data: req.body.order_data,
+      order_date: req.body.order_date,
+    };
 
-    const myData = await Orders.findOne({ email });
-    // console.log("MyData>>>", myData);
-    res.json({ orderData: myData });
+    const result = await fetchOrderedService(data);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
   } catch (err) {
-    console.error("Server error:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Server Error",
+    });
   }
 };

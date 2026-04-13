@@ -1,14 +1,18 @@
 const Joi = require("joi");
-const crypto = require("crypto");
-const passwordRestToken = require("../models/passwordRestToekn.model");
-const User = require("../models/user.model");
+
+const {
+  loginService,
+  signUpService,
+  resetPasswordLinkService,
+  passwordRestService,
+  changeCurrentPasswordService,
+} = require("../services/auth.service");
+
 require("dotenv").config();
-const generateTokens = require("../utils/generateTokens").default;
 const {
   signUpBodyValidation,
   logInBodyValidation,
 } = require("../utils/validationSchema");
-const sendEmail = require("../utils/sendEmail");
 
 const bcrypt = require("bcryptjs");
 
@@ -28,34 +32,19 @@ exports.registerNewUser = async (req, res) => {
 
       return res.status(400).json({ errors: true, message: error.details[0] });
     }
-    const user = await User.findOne({ email: req.body.email });
-    if (user) {
-      // console.log("User exist");
-      return res
-        .status(400)
-        .json({ error: true, message: "User with given email already exis" });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hassPassword = await bcrypt.hash(req.body.password, salt);
 
-    const NewUser = await new User({
-      name: req.body.name,
-      password: hassPassword,
-      email: req.body.email,
-      location: req.body.location,
-      role: req.body.role,
-    }).save();
-    const { accessToken, refreshToken } = await generateTokens(NewUser);
-    setRefreshTokenCookie(res, refreshToken);
-
+    const result = await signUpService(req.body);
+    setRefreshTokenCookie(res, result.refreshToken);
     res.status(201).json({
       error: false,
       message: "Account created successfully",
-      accessToken,
+      accessToken: result.accessToken,
     });
-  } catch (error) {
-    console.error("Signup error:", error);
-    res.status(500).json({ error: true, message: "Internal Server Error" });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      error: true,
+      message: err.message || "Internal Server Error",
+    });
   }
 };
 
@@ -63,61 +52,44 @@ exports.login = async (req, res) => {
   try {
     const { error } = logInBodyValidation(req.body);
     if (error) {
-      return res
-        .status(400)
-        .json({ error: true, message: error.details[0].message });
+      return res.status(400).json({
+        error: true,
+        message: error.details[0].message,
+      });
     }
-    const user = await User.findOne({ email: req.body.email });
-    if (!user)
-      return res
-        .status(401)
-        .json({ error: true, message: "Invalid email or password" });
 
-    // const userData = await User.findOne({ email });
-    const verifiedPassword = await bcrypt.compare(
-      req.body.password,
-      user.password,
-    );
-    if (!verifiedPassword)
-      return res
-        .status(401)
-        .json({ error: true, message: "Invalid email or password" });
-    const { accessToken, refreshToken } = await generateTokens(user);
+    const { user, tokens } = await loginService(req.body);
 
-    setRefreshTokenCookie(res, refreshToken);
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
-    res
-      .status(200)
-      .json({ error: false, accessToken, message: "Logged in successfully" });
-  } catch (error) {
-    console.error("Server error:", error);
-    res.status(500).json({ error: true, message: "Internal Server Error" });
+    res.status(200).json({
+      error: false,
+      accessToken: tokens.accessToken,
+      message: "Logged in successfully",
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      error: true,
+      message: err.message || "Internal Server Error",
+    });
   }
 };
-
 exports.sendRestPassLink = async (req, res) => {
   try {
     const Schema = Joi.object({ email: Joi.string().email().required() });
     const { error } = Schema.validate(req.body);
     if (error) return res.status(400).send(error.details[0].message);
+    const result = await resetPasswordLinkService(req.body);
 
-    const user = await User.findOne({ email: req.body.email });
-    if (!user)
-      return res.status(400).json("User with given email doesn't exist");
-
-    let token = await passwordRestToken.findOne({ userId: user._id });
-    if (!token) {
-      token = await new passwordRestToken({
-        userId: user._id,
-        token: crypto.randomBytes(32).toString("hex"),
-      }).save();
-    }
-    const link = `${process.env.CLIENT_URL}/reset-password/${user._id}/${token.token}`;
-    await sendEmail(user.email, "Password reset", link);
-    res.status(200).json("password reset link sent to your email account");
+    res.status(200).json({
+      error: false,
+      message: result.message,
+    });
   } catch (err) {
-    res.send("An error occured");
-    console.log(err);
+    res.status(err.statusCode || 500).json({
+      error: true,
+      message: err.message || "Internal Server Error",
+    });
   }
 };
 
@@ -127,24 +99,23 @@ exports.passwordRest = async (req, res) => {
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).send(error.details[0].message);
 
-    const user = await User.findById(req.params.userId);
-    if (!user) return res.status(400).send("invalid link or expired");
-
-    const token = await passwordRestToken.findOne({
-      userId: user._id,
+    const data = {
+      userId: req.params.userId,
       token: req.params.token,
-    });
-    if (!token) return res.status(400).send("Invalid link or expired");
+      password: req.body.password,
+    };
 
-    const salt = await bcrypt.genSalt(10);
-    const hassPassword = await bcrypt.hash(req.body.password, salt);
-    user.password = hassPassword;
-    await user.save();
-    await passwordRestToken.deleteOne({ userId: user._id });
-    res.send("password reset sucessfully.");
+    const result = await passwordRestService(data);
+
+    res.status(200).json({
+      error: false,
+      message: result.message,
+    });
   } catch (err) {
-    res.send("An error occured");
-    console.log(err);
+    res.status(err.statusCode || 500).json({
+      error: true,
+      message: err.message || "Internal Server Error",
+    });
   }
 };
 
@@ -157,33 +128,16 @@ exports.changeCurrentpassword = async (req, res) => {
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).send(error.details[0].message);
 
-    const email = req.body.email;
-    // console.log("email", email);
-    const user = await User.findOne({ email });
-    // console.log("user>>", user);
-    if (!user) {
-      // console.log("Error herer", email);
-      return res.status(400).send("User does not exist");
-    }
+    const result = await changeCurrentPasswordService(req.body);
 
-    const verifiedPassword = await bcrypt.compare(
-      req.body.oldPassword,
-      user.password,
-    );
-    if (!verifiedPassword) {
-      // console.log("pas");
-      return res
-        .status(401)
-        .json({ error: true, message: "password not match" });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hassPassword = await bcrypt.hash(req.body.password, salt);
-
-    user.password = hassPassword;
-    await user.save();
-    res.status(200).send("password update sucessfully.");
+    res.status(200).json({
+      error: false,
+      message: result.message,
+    });
   } catch (err) {
-    // console.error("error" ,err.message)
-    res.status(500).json("Internal server error");
+    res.status(err.statusCode || 500).json({
+      error: true,
+      message: err.message || "Internal Server Error",
+    });
   }
 };

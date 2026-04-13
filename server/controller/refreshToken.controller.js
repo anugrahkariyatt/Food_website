@@ -48,29 +48,26 @@ exports.logoutUser = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
 
+    // clear cookie (always)
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "none",
     });
 
-    if (!refreshToken) {
-      return res
-        .status(200)
-        .json({ error: false, message: "Logged Out Successfully" });
+    // delete token from DB if exists
+    if (refreshToken) {
+      await UserToken.deleteOne({ token: refreshToken });
     }
 
-    const result = await UserToken.deleteOne({ token: refreshToken });
-
-    if (result.deletedCount === 0) {
-      return res
-        .status(200)
-        .json({ error: false, message: "Logged Out Successfully" });
-    }
-
-    res.status(200).json({ error: false, message: "Logged Out Successfully" });
+    res.status(200).json({
+      error: false,
+      message: "Logged Out Successfully",
+    });
   } catch (err) {
-    console.error("Logout error:", err);
-    res.status(500).json({ error: true, message: "Internal Server Error" });
+    res.status(500).json({
+      error: true,
+      message: "Internal Server Error",
+    });
   }
 };

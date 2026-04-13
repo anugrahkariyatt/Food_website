@@ -1,34 +1,14 @@
-const mongoose = require("mongoose");
-const redisClient = require("../config/redis.config");
+const { fetchFoodDataService } = require("../services/menuItems.service");
 
 exports.fetchFoodData = async (req, res) => {
-  console.time("MongoDB Fetch Time");
   try {
-    console.time("Redis Fetch Time");
-    const cachedData = await redisClient.get("menuData");
-    if (cachedData) {
-      console.timeEnd("Redis Fetch Time");
-      console.log("Cache hit: Returning cached data");
-      return res.send(JSON.parse(cachedData));
-    }
-    console.log("DB hit: Fetching Food Data");
-    console.time("MongoDB Fallback Time");
-    const foodItems = await mongoose.connection.db
-      .collection("newFoodData")
-      .find({})
-      .toArray();
+    const data = await fetchFoodDataService();
 
-    const category = await mongoose.connection.db
-      .collection("foodCategory")
-      .find({})
-      .toArray();
-
-    const responseData = [foodItems, category];
-    await redisClient.setEx("menuData", 3600, JSON.stringify(responseData));
-    console.timeEnd("MongoDB Fallback Time");
-    res.status(200).send(responseData);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Internal Server Error");
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Internal Server Error",
+    });
   }
 };
