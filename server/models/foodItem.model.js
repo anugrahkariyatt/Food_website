@@ -6,14 +6,15 @@ const FoodItemSchema = new Schema({
   CategoryName: {
     type: String,
     required: true,
+    index: true,
   },
   name: {
     type: String,
     required: true,
   },
-  
+
   img: {
-    type: String, 
+    type: String,
     required: true,
   },
   options: {
@@ -23,7 +24,7 @@ const FoodItemSchema = new Schema({
   description: {
     type: String,
     required: true,
-  }
+  },
 });
 
 module.exports = mongoose.model("newFoodData", FoodItemSchema);
