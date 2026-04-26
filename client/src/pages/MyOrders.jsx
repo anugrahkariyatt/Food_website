@@ -10,7 +10,7 @@ export default function MyOrder() {
 
   const fetchMyOrder = async () => {
     try {
-      const res = await api.post("/api/MyOrderData");
+      const res = await api.get("/api/MyOrderData");
       // console.log("Fetch", res.data);
       setOrderData(res.data);
     } catch (error) {

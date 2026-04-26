@@ -8,8 +8,8 @@ A responsive full-stack food ordering application built using the MERN stack, mo
 
 Soulful Meals is a web-based food ordering platform designed to deliver a smooth and intuitive user experience.
 
-**Purpose:**  
-Allow users to browse food items by category, manage a personal cart, and securely place orders.
+**Purpose:** 
+Allow users to browse food items by category, manage a personal cart, and securely place orders with optimized, low-latency data retrieval.
 
 **Target Audience:**  
 Users looking for a fast, responsive interface to order meals and track order history.
@@ -22,6 +22,9 @@ Users looking for a fast, responsive interface to order meals and track order hi
 - Secure user signup and login
 - JWT-based authentication
 - Password hashing using bcryptjs
+
+### Performance & Optimization
+- **Redis Caching:** Integrated Redis to cache frequent queries (like menu items and categories), significantly reducing database load and improving data retrieval latency.
 
 ### Cart System
 - Global cart state using Context API and `useReducer`
@@ -57,6 +60,7 @@ Users looking for a fast, responsive interface to order meals and track order hi
 - Node.js
 - Express.js
 - MongoDB with Mongoose
+- Redis (Data caching)
 - JWT Authentication
 - bcryptjs
 - express-validator, Joi
@@ -73,7 +77,7 @@ Users looking for a fast, responsive interface to order meals and track order hi
 ```text
 root/
 ├── client/ # React frontend (Vite + Tailwind)
-└── server/ # Node.js / Express backend (API & database
+└── server/ # Node.js / Express backend (API, DB & Redis configuration)
 ```
 ---
 ## Database Setup (MongoDB Atlas)
@@ -162,9 +166,9 @@ docker-compose down
 - `POST /api/refresh` : Used for refreshing authentication tokens
 
 ### Food & Orders
-- `POST /api/foodData` : Used for fetching food items and categories
+- `GET /api/foodData` : Used for fetching food items and categories
 - `POST /api/orderData` : Used for submitting a new order
-- `POST /api/myorderData` : Used for retrieving a user’s order history
+- `GET /api/MyorderData` : Used for retrieving a user’s order history
 Admin
 - `GET /api/admin` : Used for admin-specific data access
 ---
@@ -182,12 +186,6 @@ Admin
 </p
 ---
 ## Future Improvements
-- Role-based access control for admin dashboard
-- Online payment integration (Stripe / Razorpay)
-- Real-time order status tracking
-
-## Future Improvements
-
 - Role-based access control for admin dashboard
 - Online payment integration (Stripe / Razorpay)
 - Real-time order status tracking
