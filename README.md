@@ -168,7 +168,7 @@ docker-compose down
 ### Food & Orders
 - `GET /api/foodData` : Used for fetching food items and categories
 - `POST /api/orderData` : Used for submitting a new order
-- `GET /api/myorderData` : Used for retrieving a user’s order history
+- `GET /api/MyorderData` : Used for retrieving a user’s order history
 Admin
 - `GET /api/admin` : Used for admin-specific data access
 ---
