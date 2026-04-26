@@ -2,8 +2,7 @@ const User = require("../models/user.model");
 const passwordRestToken = require("../models/passwordRestToekn.model");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
-
-const bcrypt = require("bcryptjs");
+const { hashPassword, comparePassword } = require("../utils/hash");
 const generateTokens = require("../utils/generateTokens").default;
 
 const signUpService = async (data) => {
@@ -13,8 +12,7 @@ const signUpService = async (data) => {
     error.statusCode = 400;
     throw error;
   }
-  const salt = await bcrypt.genSalt(10);
-  const hassPassword = await bcrypt.hash(data.password, salt);
+  const hassPassword = await hashPassword(data.password);
   const NewUser = await new User({
     name: data.name,
     password: hassPassword,
@@ -39,7 +37,7 @@ const loginService = async (data) => {
     throw error;
   }
 
-  const verifiedPassword = await bcrypt.compare(data.password, user.password);
+  const verifiedPassword = await comparePassword(data.password, user.password);
 
   if (!verifiedPassword) {
     const error = new Error("Invalid email or password");
@@ -92,8 +90,7 @@ const passwordRestService = async (data) => {
     error.statusCode = 400;
     throw error;
   }
-  const salt = await bcrypt.genSalt(10);
-  const hassPassword = await bcrypt.hash(data.password, salt);
+  const hassPassword = await hashPassword(data.password);
   user.password = hassPassword;
   await user.save();
   await passwordRestToken.deleteOne({ userId: user._id });
@@ -110,17 +107,16 @@ const changeCurrentPasswordService = async (data) => {
     error.statusCode = 400;
     throw error;
   }
-  const verifiedPassword = await bcrypt.compare(
+  const verifiedPassword = await comparePassword(
     data.oldPassword,
     user.password,
   );
   if (!verifiedPassword) {
     const error = new Error("password does not match");
-    error.statusCode(401);
+    error.statusCode = 401;
     throw error;
   }
-  const salt = await bcrypt.genSalt(10);
-  const hassPassword = await bcrypt.hash(data.password, salt);
+  const hassPassword = await hashPassword(data.password);
   user.password = hassPassword;
   await user.save();
   return {
