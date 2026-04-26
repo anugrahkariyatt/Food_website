@@ -1,4 +1,5 @@
 const Orders = require("../models/order.model");
+const redisClient = require("../config/redis.config");
 
 const createOrderService = async (data) => {
   const { order_data, order_date, email } = data;
@@ -28,24 +29,51 @@ const createOrderService = async (data) => {
       { $push: { order_data: orderDataArr } },
     );
   }
+  await redisClient.del(`orders:${email}`);
 
   return {
     message: "Order Placed Successfully",
   };
 };
 
-//  PLACE ORDER
 const getOrdersService = async (email) => {
   if (!email) {
     const error = new Error("Email is required");
     error.statusCode = 400;
     throw error;
   }
-  const orders = await Orders.findOne({ email }).lean();
 
-  return {
+  const cacheKey = `orders:${email}`;
+
+  console.time("Total Fetch Time");
+
+  //  Redis check
+  console.time("Redis Fetch Time");
+  const cachedData = await redisClient.get(cacheKey);
+
+  if (cachedData) {
+    console.timeEnd("Redis Fetch Time");
+    console.log("Cache HIT");
+    return JSON.parse(cachedData);
+  }
+
+  console.timeEnd("Redis Fetch Time");
+  console.log("Cache MISS → DB");
+
+  //  DB fetch
+  console.time("MongoDB Fetch Time");
+  const orders = await Orders.findOne({ email }).lean();
+  console.timeEnd("MongoDB Fetch Time");
+
+  const result = {
     orders: orders || [],
   };
+
+  await redisClient.setEx(cacheKey, 300, JSON.stringify(result));
+
+  console.timeEnd("Total Fetch Time");
+
+  return result;
 };
 
 module.exports = { createOrderService, getOrdersService };
