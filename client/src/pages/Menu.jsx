@@ -33,7 +33,7 @@ export default function Menu() {
     setError(null);
 
     try {
-      const res = await api.post("/api/foodData");
+      const res = await api.get("/api/foodData");
 
       const data = res.data;
       if (!Array.isArray(data) || data.length < 2)
