@@ -7,6 +7,6 @@ const ordersController = require("../controller/orders.controller");
 //  PLACE ORDER
 router.post("/orderData", userAuth, ordersController.createOrder);
 
-router.post("/MyOrderData", userAuth, ordersController.fetchOrderedItems);
+router.get("/MyOrderData", userAuth, ordersController.fetchOrderedItems);
 
 module.exports = router;
