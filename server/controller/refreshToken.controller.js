@@ -48,11 +48,12 @@ exports.logoutUser = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
 
+    const isProd = process.env.NODE_ENV === "production";
     // clear cookie (always)
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
     });
 
     // delete token from DB if exists

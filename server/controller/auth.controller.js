@@ -17,11 +17,12 @@ const {
 const bcrypt = require("bcryptjs");
 
 const setRefreshTokenCookie = (res, refreshToken) => {
+  const isProd = process.env.NODE_ENV === "production";
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProd,
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: "none",
+    sameSite: isProd ? "none" : "lax",
   });
 };
 exports.registerNewUser = async (req, res) => {
